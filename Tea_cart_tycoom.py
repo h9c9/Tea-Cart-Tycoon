@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 import time
-import pandas as pd
+import datetime
 
 # Set the game title
 st.title("Tea Cart Tycoon - Simulation")
@@ -17,10 +17,10 @@ if "weather" not in st.session_state:
     st.session_state.weather = None
 if "event" not in st.session_state:
     st.session_state.event = None
-if "tea_inventory" not in st.session_state:
-    st.session_state.tea_inventory = pd.DataFrame(columns=["Tea Type", "Price", "Cost", "Replenish Quantity", "Wastage"])
-if "snack_inventory" not in st.session_state:
-    st.session_state.snack_inventory = pd.DataFrame(columns=["Snack Type", "Price", "Cost", "Replenish Quantity", "Wastage"])
+if "inventory" not in st.session_state:
+    st.session_state.inventory = {"Tea": 0, "Snacks": 0}
+if "start_time" not in st.session_state:
+    st.session_state.start_time = time.time()  # Start time when game begins
 
 # Define game parameters
 total_days = 15
@@ -29,7 +29,7 @@ snack_limit = 80
 
 # Real-time Countdown Timer (45 minutes)
 st.subheader("⏳ Time Remaining")
-elapsed_time = int(time.time() - st.session_state.get("start_time", time.time()))
+elapsed_time = int(time.time() - st.session_state.start_time)
 remaining_time = max(0, (45 * 60) - elapsed_time)
 
 if remaining_time == 0:
@@ -38,76 +38,47 @@ if remaining_time == 0:
 
 st.write(f"**{remaining_time // 60} minutes {remaining_time % 60} seconds left**")
 
-# Weather conditions & impact on business
-weather_effects = {
-    "Sunny": "Normal business day, regular demand.",
-    "Rainy": "Increased demand for hot beverages, slightly reduced footfall.",
-    "Cold": "Higher demand for hot snacks and teas.",
-    "Festive": "Massive increase in customer footfall, but higher competition."
-}
-
-weather_options = list(weather_effects.keys())
+# Weather conditions
+weather_options = ["Sunny", "Rainy", "Cold", "Festive"]
 if st.session_state.weather is None:
     st.session_state.weather = random.choice(weather_options)
 
+# Random Events
+event_options = [
+    "No Special Event",
+    "Festival Nearby (Higher Demand)",
+    "Supplier Delay (Stock Issue)",
+    "Street Maintenance (Lower Footfall)",
+    "Local News Feature (Boosted Sales)"
+]
+if st.session_state.event is None:
+    st.session_state.event = random.choice(event_options)
+
+# Location Selection for Business Hours
+st.subheader(f"Day {st.session_state.day} - Select Locations for Business Hours")
+locations = ["College Area", "Business District", "Tourist Spot", "Residential Area", "Market Area"]
+morning_location = st.selectbox("📍 Morning Shift (8:00 AM - 2:00 PM)", locations, index=0)
+evening_location = st.selectbox("🌙 Evening Shift (3:00 PM - 9:00 PM)", locations, index=1)
+
 # Display Today's Weather Condition
 st.subheader("☀️ Today's Weather Condition")
-st.write(f"🌤 **{st.session_state.weather}** - {weather_effects[st.session_state.weather]}")
+st.write(f"🌤 **{st.session_state.weather}**")
 
-# Tea Inventory Selection
-st.subheader("☕ Tea Inventory Management")
-tea_types = {
-    "Masala Chai": {"Price": 15, "Cost": 8},
-    "Green Tea": {"Price": 20, "Cost": 12},
-    "Herbal Tea": {"Price": 25, "Cost": 15},
-    "Ginger Tea": {"Price": 18, "Cost": 10}
-}
+# Inventory Selection
+st.subheader("📦 Manage Inventory")
+st.write("Choose how much tea and snacks to stock for the day.")
 
-tea_data = []
-for tea, details in tea_types.items():
-    quantity = st.slider(f"Select quantity for {tea}", 0, tea_limit, 0)
-    tea_data.append([tea, details["Price"], details["Cost"], quantity, 0])
+tea_stock = st.slider("Select Tea Stock (Max: 100)", 0, tea_limit, 50)
+snack_stock = st.slider("Select Snack Stock (Max: 80)", 0, snack_limit, 40)
 
-tea_df = pd.DataFrame(tea_data, columns=["Tea Type", "Price", "Cost", "Replenish Quantity", "Wastage"])
-st.session_state.tea_inventory = tea_df
-st.write(tea_df)
-
-# Snack Inventory Selection
-st.subheader("🍪 Snack Inventory Management")
-snack_types = {
-    "Samosa": {"Price": 12, "Cost": 5},
-    "Kachori": {"Price": 10, "Cost": 4},
-    "Sandwich": {"Price": 30, "Cost": 18},
-    "Pakora": {"Price": 15, "Cost": 7},
-    "Patties": {"Price": 20, "Cost": 12}
-}
-
-snack_data = []
-for snack, details in snack_types.items():
-    quantity = st.slider(f"Select quantity for {snack}", 0, snack_limit, 0)
-    snack_data.append([snack, details["Price"], details["Cost"], quantity, 0])
-
-snack_df = pd.DataFrame(snack_data, columns=["Snack Type", "Price", "Cost", "Replenish Quantity", "Wastage"])
-st.session_state.snack_inventory = snack_df
-st.write(snack_df)
-
-# Calculate total cost for replenishing inventory
-total_cost = (tea_df["Cost"] * tea_df["Replenish Quantity"]).sum() + (snack_df["Cost"] * snack_df["Replenish Quantity"]).sum()
-
-# Deduct cost from cash in hand
-if total_cost > 0:
-    if st.session_state.cash >= total_cost:
-        st.session_state.cash -= total_cost
-        st.success(f"Inventory purchased successfully! ₹{total_cost} deducted.")
-    else:
-        st.error("Not enough cash to purchase this inventory! Reduce quantities.")
-
-st.write(f"💰 **Updated Cash in Hand: ₹{st.session_state.cash}**")
+st.session_state.inventory["Tea"] = tea_stock
+st.session_state.inventory["Snacks"] = snack_stock
 
 # Start Selling Button
 if st.button("Start Selling"):
     sales_revenue = random.randint(500, 2000)  # Simulated revenue
-    profit = sales_revenue - total_cost
+    expenses = (tea_stock * 8) + (snack_stock * 5)  # Basic cost estimation
+    profit = sales_revenue - expenses
     st.session_state.cash += profit
 
     # Update Day & Reset Conditions
@@ -117,7 +88,7 @@ if st.button("Start Selling"):
 
     # Refresh conditions
     st.session_state.weather = random.choice(weather_options)
-    st.session_state.event = random.choice(list(weather_effects.keys()))
+    st.session_state.event = random.choice(event_options)
 
     st.success(f"✅ Day {st.session_state.day - 1} Completed! Profit: ₹{profit}")
     st.write(f"💰 **Updated Cash: ₹{st.session_state.cash}**")

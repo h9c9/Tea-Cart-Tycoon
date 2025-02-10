@@ -56,7 +56,7 @@ weather_effects = {
 
 weather_options = list(weather_effects.keys())
 
-# Change weather at the start of each day
+# Change weather each new day
 if st.session_state.day == 1 or "previous_day" not in st.session_state or st.session_state.day > st.session_state.previous_day:
     st.session_state.weather = random.choice(weather_options)
     st.session_state.previous_day = st.session_state.day
@@ -116,7 +116,7 @@ if total_cost > 0 and st.session_state.cash >= total_cost:
 elif total_cost > st.session_state.cash:
     st.error("Not enough cash! Reduce inventory.")
 
-st.write(f"💰 **Cash Available: ₹{st.session_state.cash}**")
+st.subheader(f"💰 Cash Available: ₹{st.session_state.cash}")
 
 # Start Business Button
 if st.button("Start Business"):
@@ -147,7 +147,11 @@ if st.button("Close for the Day"):
     st.session_state.wastage_history.append(tea_wasted + snack_wasted)
 
     st.subheader(f"📊 Day {st.session_state.day} Summary")
-    st.write(f"🔹 **Cash Available:** ₹{st.session_state.cash}")
+    st.write(f"🔹 **Morning Location:** {morning_location}")
+    st.write(f"🔹 **Evening Location:** {evening_location}")
+    st.write(f"🔹 **Tea Sold:** {tea_sold}, **Tea Wasted:** {tea_wasted}")
+    st.write(f"🔹 **Snacks Sold:** {snack_sold}, **Snacks Wasted:** {snack_wasted}")
+    st.write(f"🔹 **Total Revenue:** ₹{revenue}")
 
     st.session_state.day += 1
 
@@ -155,6 +159,7 @@ if st.session_state.day > total_days or remaining_time == 0:
     st.subheader("🏁 Game Over!")
     st.write(f"💰 **Final Cash:** ₹{st.session_state.cash}")
     st.write("🎉 Thank you for playing Tea Cart Tycoon!")
+
 
 
 

@@ -26,9 +26,22 @@ if "revenue_history" not in st.session_state:
     st.session_state.revenue_history = []
 if "wastage_history" not in st.session_state:
     st.session_state.wastage_history = []
+if "start_time" not in st.session_state:
+    st.session_state.start_time = time.time()  # Start timer when game begins
 
 # Define game parameters
 total_days = 15
+
+# Game Timer (45-minute countdown)
+st.subheader("⏳ Time Remaining")
+elapsed_time = int(time.time() - st.session_state.start_time)
+remaining_time = max(0, (45 * 60) - elapsed_time)
+
+if remaining_time == 0:
+    st.session_state.game_over = True
+    st.warning("⏳ Time is up! The game has ended.")
+
+st.write(f"**{remaining_time // 60} minutes {remaining_time % 60} seconds left**")
 
 # Weather conditions & business impact
 weather_effects = {
@@ -48,6 +61,12 @@ if st.session_state.weather is None:
 # Display Today's Weather Condition
 st.subheader("☀️ Today's Weather")
 st.write(f"🌤 **{st.session_state.weather}** - {weather_effects[st.session_state.weather]}")
+
+# Location Selection for Business Hours
+st.subheader(f"📍 Select Locations for Business Hours (Morning & Evening)")
+locations = ["College Area", "Business District", "Tourist Spot", "Residential Area", "Market Area"]
+morning_location = st.selectbox("☀️ Morning Shift (8:00 AM - 2:00 PM)", locations, index=0)
+evening_location = st.selectbox("🌙 Evening Shift (3:00 PM - 9:00 PM)", locations, index=1)
 
 # Tea Inventory Selection
 st.subheader("☕ Tea Inventory Management")
@@ -126,27 +145,29 @@ if st.button("Close for the Day"):
 
     # Daily Summary
     st.subheader(f"📊 Day {st.session_state.day} Summary")
+    st.write(f"🔹 **Morning Location:** {morning_location}")
+    st.write(f"🔹 **Evening Location:** {evening_location}")
     st.write(f"🔹 **Tea Sold:** {tea_sold}, **Tea Wasted:** {tea_wasted}")
     st.write(f"🔹 **Snacks Sold:** {snack_sold}, **Snacks Wasted:** {snack_wasted}")
     st.write(f"🔹 **Total Revenue:** ₹{revenue}")
-
-    # Cumulative Summary
-    st.subheader("📈 Cumulative Sales & Wastage")
-    fig, ax = plt.subplots()
-    ax.plot(range(1, len(st.session_state.tea_sales) + 1), st.session_state.tea_sales, label="Tea Sales")
-    ax.plot(range(1, len(st.session_state.snack_sales) + 1), st.session_state.snack_sales, label="Snack Sales")
-    ax.plot(range(1, len(st.session_state.wastage_history) + 1), st.session_state.wastage_history, label="Total Wastage")
-    ax.set_xlabel("Days")
-    ax.set_ylabel("Units")
-    ax.set_title("Sales & Wastage Trend")
-    ax.legend()
-    st.pyplot(fig)
 
     # Proceed to Next Day
     st.session_state.day += 1
 
 # End of Game Condition
-if st.session_state.day > total_days:
+if st.session_state.day > total_days or remaining_time == 0:
     st.subheader("🏁 Game Over!")
     st.write(f"💰 **Final Cash:** ₹{st.session_state.cash}")
     st.write("🎉 Thank you for playing Tea Cart Tycoon!")
+
+
+
+
+   
+
+
+
+   
+
+   
+   

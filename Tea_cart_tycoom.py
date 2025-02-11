@@ -15,7 +15,7 @@ if "cash" not in st.session_state:
 if "game_over" not in st.session_state:
     st.session_state.game_over = False
 if "weather" not in st.session_state:
-    st.session_state.weather = "Sunny"  # Default weather to prevent errors
+    st.session_state.weather = "Sunny"  # Default weather
 if "event" not in st.session_state:
     st.session_state.event = None
 if "tea_sales" not in st.session_state:
@@ -112,7 +112,7 @@ for snack, details in snack_types.items():
 snack_df = pd.DataFrame(snack_data, columns=["Snack Type", "Price", "Cost", "Replenish Quantity", "Wastage"])
 st.write(snack_df)
 
-# Generate Random Business Event after Business Starts
+# Generate Random Business Event when Business Starts
 if st.button("🚀 Start Business"):
     event_options = [
         "Festival Nearby - High Footfall",
@@ -153,21 +153,3 @@ if st.session_state.day > total_days or remaining_time == 0:
     st.subheader("🏁 Game Over!")
     st.write(f"💰 **Final Cash:** ₹{st.session_state.cash}")
     st.write("🎉 Thank you for playing Tea Cart Tycoon!")
-
-
-
-
-
-
-
-
-
-
-   
-
-
-
-   
-
-   
-   

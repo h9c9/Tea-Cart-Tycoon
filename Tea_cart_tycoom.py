@@ -63,8 +63,9 @@ if st.session_state.day == 1 or st.button("📅 End Day & Generate Forecast"):
     st.session_state.forecast = random.sample(locations, 2)  # Pick 2 locations
     st.success("🔮 Tomorrow's Market Forecast:")
     for loc in st.session_state.forecast:
-        forecast_event, _ = random.choice(event_impact[loc])
-        st.write(f"📌 **{loc}** → *{forecast_event}*")
+        forecast_event = random.choice(event_impact[loc])  # Select random event
+        if isinstance(forecast_event, tuple) and len(forecast_event) == 2:
+            st.write(f"📌 **{loc}** → *{forecast_event[0]}*")
 
 # **Weather Generation for Current Day**
 if st.button("🎮 Play Day"):
@@ -78,11 +79,17 @@ st.write(f"🌤 **{st.session_state.weather}**")
 # **Business Events for Today (Actual impact applied)**
 st.subheader("📢 Event of the Day")
 for loc in locations:
-    event, impact_range = random.choice(event_impact[loc])
-    impact = random.randint(*impact_range)  # Random % impact in range
-    st.write(f"📌 **{loc}** → *{event}* → Impact: **{impact}%** sales change")
+    event_tuple = random.choice(event_impact[loc])  # Select random event with impact range
+
+    if isinstance(event_tuple, tuple) and len(event_tuple) == 2:  # Ensure valid format
+        event, impact_range = event_tuple  # Unpack event and impact range
+        impact = random.randint(*impact_range)  # Random % impact in range
+        st.write(f"📌 **{loc}** → *{event}* → Impact: **{impact}%** sales change")
+    else:
+        st.warning(f"⚠️ No valid event found for {loc}. Skipping event.")
 
 # Proceed with inventory selection, selling, and day-end summary...
+
 
 
 

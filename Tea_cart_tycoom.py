@@ -43,11 +43,6 @@ if remaining_time == 0:
 
 st.write(f"**{remaining_time // 60} minutes {remaining_time % 60} seconds left**")
 
-# Play Day Button (Ensures a structured sequence)
-if st.button("🎮 Play Day"):
-    st.session_state.weather = random.choice(["Sunny", "Rainy", "Heavy Rains", "Cloudy", "Hot", "Cold", "Very Cold"])
-    st.success(f"New Day Started! Today's weather: {st.session_state.weather}")
-
 # Weather conditions & business impact
 weather_effects = {
     "Sunny": "Normal business day, regular demand.",
@@ -62,6 +57,12 @@ weather_effects = {
 # Ensure weather is always valid
 if st.session_state.weather not in weather_effects:
     st.session_state.weather = "Sunny"
+
+# Play Day Button (Starts a New Day)
+if st.button("🎮 Play Day"):
+    st.session_state.weather = random.choice(list(weather_effects.keys()))  # Generate new weather
+    st.session_state.event = None  # Reset event
+    st.success(f"New Day Started! Weather: {st.session_state.weather}")
 
 # Display Today's Weather Condition
 st.subheader("☀️ Today's Weather")
@@ -108,17 +109,18 @@ for snack, details in snack_types.items():
 snack_df = pd.DataFrame(snack_data, columns=["Snack Type", "Price", "Cost", "Replenish Quantity", "Wastage"])
 st.write(snack_df)
 
-# Calculate total cost for replenishing inventory
-total_cost = (tea_df["Cost"] * tea_df["Replenish Quantity"]).sum() + (snack_df["Cost"] * snack_df["Replenish Quantity"]).sum()
-
-# Deduct cost from cash available
-if total_cost > 0 and st.session_state.cash >= total_cost:
-    st.session_state.cash -= total_cost
-    st.success(f"Inventory purchased! ₹{total_cost} deducted.")
-elif total_cost > st.session_state.cash:
-    st.error("Not enough cash! Reduce inventory.")
-
-st.subheader(f"💰 Cash Available: ₹{st.session_state.cash}")
+# Generate Random Business Event after Business Starts
+if st.button("🚀 Start Business"):
+    event_options = [
+        "Festival Nearby - High Footfall",
+        "Supplier Delay - Some items unavailable",
+        "Competitor Discount - Customers might switch",
+        "Local News Feature - Boosted Sales",
+        "Power Outage - Limited operations"
+    ]
+    st.session_state.event = random.choice(event_options)
+    st.subheader("📢 Event of the Day")
+    st.write(f"🎭 **{st.session_state.event}**")
 
 # Close for the Day Button
 if st.button("🔚 Close for the Day"):
@@ -150,6 +152,7 @@ if st.session_state.day > total_days or remaining_time == 0:
     st.subheader("🏁 Game Over!")
     st.write(f"💰 **Final Cash:** ₹{st.session_state.cash}")
     st.write("🎉 Thank you for playing Tea Cart Tycoon!")
+
 
 
 

@@ -11,7 +11,7 @@ st.title("Tea Cart Tycoon - Simulation")
 if "day" not in st.session_state:
     st.session_state.day = 1
 if "cash" not in st.session_state:
-    st.session_state.cash = 15000  # Initial Cash
+    st.session_state.cash = 15000  # Cash in Hand
 if "game_over" not in st.session_state:
     st.session_state.game_over = False
 if "weather" not in st.session_state:
@@ -23,8 +23,8 @@ if "sales_summary" not in st.session_state:
 if "start_time" not in st.session_state:
     st.session_state.start_time = time.time()
 
-# Display Initial Cash
-st.subheader(f"💰 Initial Cash: ₹{st.session_state.cash}")
+# Display Cash in Hand
+st.subheader(f"💰 Cash in Hand: ₹{st.session_state.cash}")
 
 # Define game parameters
 total_days = 15
@@ -102,6 +102,14 @@ for snack, details in snack_types.items():
 snack_df = pd.DataFrame(snack_data, columns=["Snack Type", "Price", "Cost", "Replenish Quantity"])
 st.write(snack_df)
 
+# Deduct Cost for Inventory Purchase
+cost = (tea_df["Cost"] * tea_df["Replenish Quantity"]).sum() + (snack_df["Cost"] * snack_df["Replenish Quantity"]).sum()
+if st.session_state.cash >= cost:
+    st.session_state.cash -= cost
+    st.success(f"Inventory purchased! ₹{cost} deducted from Cash in Hand.")
+else:
+    st.error("Not enough cash! Reduce inventory.")
+
 # Generate Random Business Event when Business Starts
 if st.button("🚀 Start Business"):
     event_options = [
@@ -123,10 +131,9 @@ if st.button("🔚 Close for the Day"):
     snack_wasted = [q - s for q, s in zip(snack_df["Replenish Quantity"], snack_sold)]
     
     revenue = sum([s * p for s, p in zip(tea_sold, tea_df["Price"])]) + sum([s * p for s, p in zip(snack_sold, snack_df["Price"])])
-    cost = sum([q * c for q, c in zip(tea_df["Replenish Quantity"], tea_df["Cost"])]) + sum([q * c for q, c in zip(snack_df["Replenish Quantity"], snack_df["Cost"])])
     wastage = sum(tea_wasted) + sum(snack_wasted)
 
-    st.session_state.cash += revenue
+    st.session_state.cash += revenue  # Add revenue after deducting cost earlier
 
     # Update Summary Table with Event of the Day
     new_row = pd.DataFrame({"Day": [st.session_state.day], "Tea Sold": [sum(tea_sold)], "Snacks Sold": [sum(snack_sold)], 
@@ -143,4 +150,6 @@ if st.session_state.day > total_days or remaining_time == 0:
     st.subheader("🏁 Game Over!")
     st.write(f"💰 **Final Cash:** ₹{st.session_state.cash}")
     st.write("🎉 Thank you for playing Tea Cart Tycoon!")
+
+
 

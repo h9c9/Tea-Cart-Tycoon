@@ -18,16 +18,6 @@ if "weather" not in st.session_state:
     st.session_state.weather = "Sunny"  # Default weather
 if "event" not in st.session_state:
     st.session_state.event = None
-if "tea_sales" not in st.session_state:
-    st.session_state.tea_sales = []
-if "snack_sales" not in st.session_state:
-    st.session_state.snack_sales = []
-if "revenue_history" not in st.session_state:
-    st.session_state.revenue_history = []
-if "wastage_history" not in st.session_state:
-    st.session_state.wastage_history = []
-if "cost_history" not in st.session_state:
-    st.session_state.cost_history = []
 if "sales_summary" not in st.session_state:
     st.session_state.sales_summary = pd.DataFrame(columns=["Day", "Tea Sold", "Snacks Sold", "Revenue", "Cost", "Wastage", "Event"])
 if "start_time" not in st.session_state:
@@ -65,8 +55,6 @@ weather_effects = {
 if st.button("🎮 Play Day"):
     st.session_state.weather = random.choice(list(weather_effects.keys()))  # Generate new weather
     st.session_state.event = None  # Reset event
-    st.session_state.tea_sales = []
-    st.session_state.snack_sales = []
     st.success(f"New Day Started! Weather: {st.session_state.weather}")
 
 # Display Today's Weather Condition
@@ -79,7 +67,7 @@ locations = ["College Area", "Business District", "Tourist Spot", "Residential A
 morning_location = st.selectbox("☀️ Morning Shift (8:00 AM - 2:00 PM)", locations, index=0)
 evening_location = st.selectbox("🌙 Evening Shift (3:00 PM - 9:00 PM)", locations, index=1)
 
-# Tea Inventory Selection (Reset to Zero)
+# Tea Inventory Selection
 st.subheader("☕ Tea Inventory Management")
 tea_types = {
     "Masala Chai": {"Price": 15, "Cost": 8},
@@ -91,12 +79,12 @@ tea_types = {
 tea_data = []
 for tea, details in tea_types.items():
     quantity = st.slider(f"Select quantity for {tea}", 0, 100, 0, key=f"tea_{tea}")
-    tea_data.append([tea, details["Price"], details["Cost"], quantity, 0])
+    tea_data.append([tea, details["Price"], details["Cost"], quantity])
 
-tea_df = pd.DataFrame(tea_data, columns=["Tea Type", "Price", "Cost", "Replenish Quantity", "Wastage"])
+tea_df = pd.DataFrame(tea_data, columns=["Tea Type", "Price", "Cost", "Replenish Quantity"])
 st.write(tea_df)
 
-# Snack Inventory Selection (Reset to Zero)
+# Snack Inventory Selection
 st.subheader("🍪 Snack Inventory Management")
 snack_types = {
     "Samosa": {"Price": 12, "Cost": 5},
@@ -109,9 +97,9 @@ snack_types = {
 snack_data = []
 for snack, details in snack_types.items():
     quantity = st.slider(f"Select quantity for {snack}", 0, 80, 0, key=f"snack_{snack}")
-    snack_data.append([snack, details["Price"], details["Cost"], quantity, 0])
+    snack_data.append([snack, details["Price"], details["Cost"], quantity])
 
-snack_df = pd.DataFrame(snack_data, columns=["Snack Type", "Price", "Cost", "Replenish Quantity", "Wastage"])
+snack_df = pd.DataFrame(snack_data, columns=["Snack Type", "Price", "Cost", "Replenish Quantity"])
 st.write(snack_df)
 
 # Generate Random Business Event when Business Starts
@@ -129,21 +117,20 @@ if st.button("🚀 Start Business"):
 
 # Close for the Day Button
 if st.button("🔚 Close for the Day"):
-    tea_sold = random.randint(30, 100)
-    snack_sold = random.randint(20, 80)
-    tea_wasted = max(0, sum(tea_df["Replenish Quantity"]) - tea_sold)
-    snack_wasted = max(0, sum(snack_df["Replenish Quantity"]) - snack_sold)
-    revenue = (tea_sold * 15) + (snack_sold * 12)
-    cost = (tea_df["Cost"] * tea_df["Replenish Quantity"]).sum() + (snack_df["Cost"] * snack_df["Replenish Quantity"]).sum()
+    tea_sold = [random.randint(0, q) for q in tea_df["Replenish Quantity"]]
+    snack_sold = [random.randint(0, q) for q in snack_df["Replenish Quantity"]]
+    tea_wasted = [q - s for q, s in zip(tea_df["Replenish Quantity"], tea_sold)]
+    snack_wasted = [q - s for q, s in zip(snack_df["Replenish Quantity"], snack_sold)]
+    
+    revenue = sum([s * p for s, p in zip(tea_sold, tea_df["Price"])]) + sum([s * p for s, p in zip(snack_sold, snack_df["Price"])])
+    cost = sum([q * c for q, c in zip(tea_df["Replenish Quantity"], tea_df["Cost"])]) + sum([q * c for q, c in zip(snack_df["Replenish Quantity"], snack_df["Cost"])])
+    wastage = sum(tea_wasted) + sum(snack_wasted)
 
     st.session_state.cash += revenue
-    st.session_state.revenue_history.append(revenue)
-    st.session_state.wastage_history.append(tea_wasted + snack_wasted)
-    st.session_state.cost_history.append(cost)
 
     # Update Summary Table with Event of the Day
-    new_row = pd.DataFrame({"Day": [st.session_state.day], "Tea Sold": [tea_sold], "Snacks Sold": [snack_sold], 
-                            "Revenue": [revenue], "Cost": [cost], "Wastage": [tea_wasted + snack_wasted], 
+    new_row = pd.DataFrame({"Day": [st.session_state.day], "Tea Sold": [sum(tea_sold)], "Snacks Sold": [sum(snack_sold)], 
+                            "Revenue": [revenue], "Cost": [cost], "Wastage": [wastage], 
                             "Event": [st.session_state.event if st.session_state.event else "No Event"]})
     st.session_state.sales_summary = pd.concat([st.session_state.sales_summary, new_row], ignore_index=True)
 
@@ -156,3 +143,4 @@ if st.session_state.day > total_days or remaining_time == 0:
     st.subheader("🏁 Game Over!")
     st.write(f"💰 **Final Cash:** ₹{st.session_state.cash}")
     st.write("🎉 Thank you for playing Tea Cart Tycoon!")
+

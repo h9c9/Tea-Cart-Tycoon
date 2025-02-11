@@ -18,142 +18,72 @@ if "weather" not in st.session_state:
     st.session_state.weather = "Sunny"  # Default weather
 if "event" not in st.session_state:
     st.session_state.event = None
-if "cost" not in st.session_state:
-    st.session_state.cost = 0  # Track daily inventory cost
+if "forecast" not in st.session_state:
+    st.session_state.forecast = []  # Stores forecast for 2 locations
 if "sales_summary" not in st.session_state:
     st.session_state.sales_summary = pd.DataFrame(columns=["Day", "Tea Sold", "Snacks Sold", "Revenue", "Cost", "Wastage", "Event"])
 if "start_time" not in st.session_state:
     st.session_state.start_time = time.time()
 
-# Display Cash in Hand
-st.subheader(f"💰 Cash in Hand: ₹{st.session_state.cash}")
-
 # Define game parameters
 total_days = 15
 
-# Game Timer (45-minute countdown)
-st.subheader("⏳ Time Remaining")
-elapsed_time = int(time.time() - st.session_state.start_time)
-remaining_time = max(0, (45 * 60) - elapsed_time)
+# Location and Event Impact System
+locations = ["Business District", "College Area", "Tourist Spot", "Residential Area", "Market Area"]
 
-if remaining_time == 0:
-    st.session_state.game_over = True
-    st.warning("⏳ Time is up! The game has ended.")
-
-st.write(f"**{remaining_time // 60} minutes {remaining_time % 60} seconds left**")
-
-# Weather conditions & business impact
-weather_effects = {
-    "Sunny": "Normal business day, regular demand.",
-    "Rainy": "Increased demand for hot beverages, slightly reduced footfall.",
-    "Heavy Rains": "Very few customers, high impact on sales.",
-    "Cloudy": "Moderate demand, no major impact.",
-    "Hot": "Higher demand for cold drinks, tea sales drop.",
-    "Cold": "Increased demand for hot beverages and snacks.",
-    "Very Cold": "Very high demand for hot teas and snacks."
+event_impact = {
+    "Business District": [
+        ("Crowded - Office rush hour increased.", (20, 50)),
+        ("Low footfall - Many employees working from home.", (-30, -50)),
+        ("Trade fair happening - Increased visitors.", (30, 60))
+    ],
+    "College Area": [
+        ("Full attendance - Exam season, students on campus.", (30, 60)),
+        ("Preparation leave announced - Half the students are absent.", (-40, -60)),
+        ("College festival today - Many visitors.", (50, 80))
+    ],
+    "Tourist Spot": [
+        ("Peak tourist season - More footfall.", (40, 70)),
+        ("Heavy rains - Fewer tourists visiting today.", (-30, -60)),
+        ("Local attraction featured on social media.", (50, 80))
+    ],
+    "Residential Area": [
+        ("Weekend - More people at home.", (15, 40)),
+        ("Construction work nearby - Dust & noise reducing visitors.", (-30, -50))
+    ],
+    "Market Area": [
+        ("Festival rush - Heavy shopping crowd.", (30, 60)),
+        ("Month-end - People have less money left.", (-20, -50)),
+        ("Vendor strike - Some shops closed.", (25, 50))
+    ]
 }
 
-# Play Day Button (Starts a New Day & Resets Inventory)
+# **Forecast System: Generates for 2 random locations each day**
+if st.session_state.day == 1 or st.button("📅 End Day & Generate Forecast"):
+    st.session_state.forecast = random.sample(locations, 2)  # Pick 2 locations
+    st.success("🔮 Tomorrow's Market Forecast:")
+    for loc in st.session_state.forecast:
+        forecast_event, _ = random.choice(event_impact[loc])
+        st.write(f"📌 **{loc}** → *{forecast_event}*")
+
+# **Weather Generation for Current Day**
 if st.button("🎮 Play Day"):
-    st.session_state.weather = random.choice(list(weather_effects.keys()))  # Generate new weather
-    st.session_state.event = None  # Reset event
-    st.session_state.cost = 0  # Reset daily cost
+    st.session_state.weather = random.choice(["Sunny", "Rainy", "Heavy Rains", "Cloudy", "Hot", "Cold", "Very Cold"])
     st.success(f"New Day Started! Weather: {st.session_state.weather}")
 
-# Display Today's Weather Condition
+# **Display Current Day Weather**
 st.subheader("☀️ Today's Weather")
-st.write(f"🌤 **{st.session_state.weather}** - {weather_effects[st.session_state.weather]}")
+st.write(f"🌤 **{st.session_state.weather}**")
 
-# Location Selection for Business Hours
-st.subheader(f"📍 Select Locations for Business Hours (Morning & Evening)")
-locations = ["College Area", "Business District", "Tourist Spot", "Residential Area", "Market Area"]
-morning_location = st.selectbox("☀️ Morning Shift (8:00 AM - 2:00 PM)", locations, index=0)
-evening_location = st.selectbox("🌙 Evening Shift (3:00 PM - 9:00 PM)", locations, index=1)
+# **Business Events for Today (Actual impact applied)**
+st.subheader("📢 Event of the Day")
+for loc in locations:
+    event, impact_range = random.choice(event_impact[loc])
+    impact = random.randint(*impact_range)  # Random % impact in range
+    st.write(f"📌 **{loc}** → *{event}* → Impact: **{impact}%** sales change")
 
-# Tea Inventory Selection
-st.subheader("☕ Tea Inventory Management")
-tea_types = {
-    "Masala Chai": {"Price": 15, "Cost": 8},
-    "Green Tea": {"Price": 20, "Cost": 12},
-    "Herbal Tea": {"Price": 25, "Cost": 15},
-    "Ginger Tea": {"Price": 18, "Cost": 10}
-}
+# Proceed with inventory selection, selling, and day-end summary...
 
-tea_data = []
-for tea, details in tea_types.items():
-    quantity = st.slider(f"Select quantity for {tea}", 0, 100, 0, key=f"tea_{tea}")
-    tea_data.append([tea, details["Price"], details["Cost"], quantity])
-
-tea_df = pd.DataFrame(tea_data, columns=["Tea Type", "Price", "Cost", "Replenish Quantity"])
-st.write(tea_df)
-
-# Snack Inventory Selection
-st.subheader("🍪 Snack Inventory Management")
-snack_types = {
-    "Samosa": {"Price": 12, "Cost": 5},
-    "Kachori": {"Price": 10, "Cost": 4},
-    "Sandwich": {"Price": 30, "Cost": 18},
-    "Pakora": {"Price": 15, "Cost": 7},
-    "Patties": {"Price": 20, "Cost": 12}
-}
-
-snack_data = []
-for snack, details in snack_types.items():
-    quantity = st.slider(f"Select quantity for {snack}", 0, 80, 0, key=f"snack_{snack}")
-    snack_data.append([snack, details["Price"], details["Cost"], quantity])
-
-snack_df = pd.DataFrame(snack_data, columns=["Snack Type", "Price", "Cost", "Replenish Quantity"])
-st.write(snack_df)
-
-# Calculate and Deduct Inventory Cost **Only Once**
-if st.button("📦 Purchase Inventory"):
-    st.session_state.cost = (tea_df["Cost"] * tea_df["Replenish Quantity"]).sum() + (snack_df["Cost"] * snack_df["Replenish Quantity"]).sum()
-    if st.session_state.cash >= st.session_state.cost:
-        st.session_state.cash -= st.session_state.cost
-        st.success(f"Inventory purchased! ₹{st.session_state.cost} deducted from Cash in Hand.")
-    else:
-        st.error("Not enough cash! Reduce inventory.")
-
-# Generate Random Business Event when Business Starts
-if st.button("🚀 Start Business"):
-    event_options = [
-        "Festival Nearby - High Footfall",
-        "Supplier Delay - Some items unavailable",
-        "Competitor Discount - Customers might switch",
-        "Local News Feature - Boosted Sales",
-        "Power Outage - Limited operations"
-    ]
-    st.session_state.event = random.choice(event_options)
-    st.subheader("📢 Event of the Day")
-    st.write(f"🎭 **{st.session_state.event}**")
-
-# Close for the Day Button
-if st.button("🔚 Close for the Day"):
-    tea_sold = [random.randint(0, q) for q in tea_df["Replenish Quantity"]]
-    snack_sold = [random.randint(0, q) for q in snack_df["Replenish Quantity"]]
-    tea_wasted = [q - s for q, s in zip(tea_df["Replenish Quantity"], tea_sold)]
-    snack_wasted = [q - s for q, s in zip(snack_df["Replenish Quantity"], snack_sold)]
-    
-    revenue = sum([s * p for s, p in zip(tea_sold, tea_df["Price"])]) + sum([s * p for s, p in zip(snack_sold, snack_df["Price"])])
-    wastage = sum(tea_wasted) + sum(snack_wasted)
-
-    st.session_state.cash += revenue  # Add revenue after deducting cost earlier
-
-    # Update Summary Table with Event of the Day
-    new_row = pd.DataFrame({"Day": [st.session_state.day], "Tea Sold": [sum(tea_sold)], "Snacks Sold": [sum(snack_sold)], 
-                            "Revenue": [revenue], "Cost": [st.session_state.cost], "Wastage": [wastage], 
-                            "Event": [st.session_state.event if st.session_state.event else "No Event"]})
-    st.session_state.sales_summary = pd.concat([st.session_state.sales_summary, new_row], ignore_index=True)
-
-    st.subheader("📊 Day-wise Sales Summary")
-    st.write(st.session_state.sales_summary)
-
-    st.session_state.day += 1
-
-if st.session_state.day > total_days or remaining_time == 0:
-    st.subheader("🏁 Game Over!")
-    st.write(f"💰 **Final Cash:** ₹{st.session_state.cash}")
-    st.write("🎉 Thank you for playing Tea Cart Tycoon!")
 
 
 

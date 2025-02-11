@@ -29,7 +29,7 @@ if "wastage_history" not in st.session_state:
 if "cost_history" not in st.session_state:
     st.session_state.cost_history = []
 if "sales_summary" not in st.session_state:
-    st.session_state.sales_summary = pd.DataFrame(columns=["Day", "Tea Sold", "Snacks Sold", "Revenue", "Cost", "Wastage"])
+    st.session_state.sales_summary = pd.DataFrame(columns=["Day", "Tea Sold", "Snacks Sold", "Revenue", "Cost", "Wastage", "Event"])
 if "start_time" not in st.session_state:
     st.session_state.start_time = time.time()
 
@@ -61,10 +61,12 @@ weather_effects = {
     "Very Cold": "Very high demand for hot teas and snacks."
 }
 
-# Play Day Button (Starts a New Day)
+# Play Day Button (Starts a New Day & Resets Inventory)
 if st.button("🎮 Play Day"):
     st.session_state.weather = random.choice(list(weather_effects.keys()))  # Generate new weather
     st.session_state.event = None  # Reset event
+    st.session_state.tea_sales = []
+    st.session_state.snack_sales = []
     st.success(f"New Day Started! Weather: {st.session_state.weather}")
 
 # Display Today's Weather Condition
@@ -77,7 +79,7 @@ locations = ["College Area", "Business District", "Tourist Spot", "Residential A
 morning_location = st.selectbox("☀️ Morning Shift (8:00 AM - 2:00 PM)", locations, index=0)
 evening_location = st.selectbox("🌙 Evening Shift (3:00 PM - 9:00 PM)", locations, index=1)
 
-# Tea Inventory Selection
+# Tea Inventory Selection (Reset to Zero)
 st.subheader("☕ Tea Inventory Management")
 tea_types = {
     "Masala Chai": {"Price": 15, "Cost": 8},
@@ -88,13 +90,13 @@ tea_types = {
 
 tea_data = []
 for tea, details in tea_types.items():
-    quantity = st.slider(f"Select quantity for {tea}", 0, 100, 0)
+    quantity = st.slider(f"Select quantity for {tea}", 0, 100, 0, key=f"tea_{tea}")
     tea_data.append([tea, details["Price"], details["Cost"], quantity, 0])
 
 tea_df = pd.DataFrame(tea_data, columns=["Tea Type", "Price", "Cost", "Replenish Quantity", "Wastage"])
 st.write(tea_df)
 
-# Snack Inventory Selection
+# Snack Inventory Selection (Reset to Zero)
 st.subheader("🍪 Snack Inventory Management")
 snack_types = {
     "Samosa": {"Price": 12, "Cost": 5},
@@ -106,7 +108,7 @@ snack_types = {
 
 snack_data = []
 for snack, details in snack_types.items():
-    quantity = st.slider(f"Select quantity for {snack}", 0, 80, 0)
+    quantity = st.slider(f"Select quantity for {snack}", 0, 80, 0, key=f"snack_{snack}")
     snack_data.append([snack, details["Price"], details["Cost"], quantity, 0])
 
 snack_df = pd.DataFrame(snack_data, columns=["Snack Type", "Price", "Cost", "Replenish Quantity", "Wastage"])
@@ -139,9 +141,10 @@ if st.button("🔚 Close for the Day"):
     st.session_state.wastage_history.append(tea_wasted + snack_wasted)
     st.session_state.cost_history.append(cost)
 
-    # Update Summary Table
+    # Update Summary Table with Event of the Day
     new_row = pd.DataFrame({"Day": [st.session_state.day], "Tea Sold": [tea_sold], "Snacks Sold": [snack_sold], 
-                            "Revenue": [revenue], "Cost": [cost], "Wastage": [tea_wasted + snack_wasted]})
+                            "Revenue": [revenue], "Cost": [cost], "Wastage": [tea_wasted + snack_wasted], 
+                            "Event": [st.session_state.event if st.session_state.event else "No Event"]})
     st.session_state.sales_summary = pd.concat([st.session_state.sales_summary, new_row], ignore_index=True)
 
     st.subheader("📊 Day-wise Sales Summary")

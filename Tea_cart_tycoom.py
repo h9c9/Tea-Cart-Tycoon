@@ -15,7 +15,7 @@ if "cash" not in st.session_state:
 if "game_over" not in st.session_state:
     st.session_state.game_over = False
 if "weather" not in st.session_state:
-    st.session_state.weather = None
+    st.session_state.weather = "Sunny"  # Default weather to prevent errors
 if "event" not in st.session_state:
     st.session_state.event = None
 if "tea_sales" not in st.session_state:
@@ -58,6 +58,10 @@ weather_effects = {
     "Cold": "Increased demand for hot beverages and snacks.",
     "Very Cold": "Very high demand for hot teas and snacks."
 }
+
+# Ensure weather is always valid
+if st.session_state.weather not in weather_effects:
+    st.session_state.weather = "Sunny"
 
 # Display Today's Weather Condition
 st.subheader("☀️ Today's Weather")
@@ -146,6 +150,7 @@ if st.session_state.day > total_days or remaining_time == 0:
     st.subheader("🏁 Game Over!")
     st.write(f"💰 **Final Cash:** ₹{st.session_state.cash}")
     st.write("🎉 Thank you for playing Tea Cart Tycoon!")
+
 
 
 

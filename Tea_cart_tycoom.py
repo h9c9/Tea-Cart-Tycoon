@@ -43,6 +43,11 @@ if remaining_time == 0:
 
 st.write(f"**{remaining_time // 60} minutes {remaining_time % 60} seconds left**")
 
+# Play Day Button (Ensures a structured sequence)
+if st.button("🎮 Play Day"):
+    st.session_state.weather = random.choice(["Sunny", "Rainy", "Heavy Rains", "Cloudy", "Hot", "Cold", "Very Cold"])
+    st.success(f"New Day Started! Today's weather: {st.session_state.weather}")
+
 # Weather conditions & business impact
 weather_effects = {
     "Sunny": "Normal business day, regular demand.",
@@ -53,13 +58,6 @@ weather_effects = {
     "Cold": "Increased demand for hot beverages and snacks.",
     "Very Cold": "Very high demand for hot teas and snacks."
 }
-
-weather_options = list(weather_effects.keys())
-
-# Change weather each new day
-if st.session_state.day == 1 or "previous_day" not in st.session_state or st.session_state.day > st.session_state.previous_day:
-    st.session_state.weather = random.choice(weather_options)
-    st.session_state.previous_day = st.session_state.day
 
 # Display Today's Weather Condition
 st.subheader("☀️ Today's Weather")
@@ -118,22 +116,8 @@ elif total_cost > st.session_state.cash:
 
 st.subheader(f"💰 Cash Available: ₹{st.session_state.cash}")
 
-# Start Business Button
-if st.button("Start Business"):
-    # Flash Random Event
-    event_options = [
-        "Festival Nearby - High Footfall",
-        "Supplier Delay - Some items unavailable",
-        "Competitor Discount - Customers might switch",
-        "Local News Feature - Boosted Sales",
-        "Power Outage - Limited operations"
-    ]
-    st.session_state.event = random.choice(event_options)
-    st.subheader("📢 Event of the Day")
-    st.write(f"🎭 **{st.session_state.event}**")
-
 # Close for the Day Button
-if st.button("Close for the Day"):
+if st.button("🔚 Close for the Day"):
     tea_sold = random.randint(30, 100)
     snack_sold = random.randint(20, 80)
     tea_wasted = max(0, sum(tea_df["Replenish Quantity"]) - tea_sold)
@@ -147,18 +131,22 @@ if st.button("Close for the Day"):
     st.session_state.wastage_history.append(tea_wasted + snack_wasted)
 
     st.subheader(f"📊 Day {st.session_state.day} Summary")
-    st.write(f"🔹 **Morning Location:** {morning_location}")
-    st.write(f"🔹 **Evening Location:** {evening_location}")
     st.write(f"🔹 **Tea Sold:** {tea_sold}, **Tea Wasted:** {tea_wasted}")
     st.write(f"🔹 **Snacks Sold:** {snack_sold}, **Snacks Wasted:** {snack_wasted}")
     st.write(f"🔹 **Total Revenue:** ₹{revenue}")
+    st.write(f"🔹 **Cash Available:** ₹{st.session_state.cash}")
 
+    # Reset inventory to zero
+    st.session_state.tea_sales = []
+    st.session_state.snack_sales = []
+    
     st.session_state.day += 1
 
 if st.session_state.day > total_days or remaining_time == 0:
     st.subheader("🏁 Game Over!")
     st.write(f"💰 **Final Cash:** ₹{st.session_state.cash}")
     st.write("🎉 Thank you for playing Tea Cart Tycoon!")
+
 
 
 

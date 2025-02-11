@@ -11,7 +11,7 @@ st.title("Tea Cart Tycoon - Simulation")
 if "day" not in st.session_state:
     st.session_state.day = 1
 if "cash" not in st.session_state:
-    st.session_state.cash = 15000
+    st.session_state.cash = 15000  # Initial Cash
 if "game_over" not in st.session_state:
     st.session_state.game_over = False
 if "weather" not in st.session_state:
@@ -26,8 +26,15 @@ if "revenue_history" not in st.session_state:
     st.session_state.revenue_history = []
 if "wastage_history" not in st.session_state:
     st.session_state.wastage_history = []
+if "cost_history" not in st.session_state:
+    st.session_state.cost_history = []
+if "sales_summary" not in st.session_state:
+    st.session_state.sales_summary = pd.DataFrame(columns=["Day", "Tea Sold", "Snacks Sold", "Revenue", "Cost", "Wastage"])
 if "start_time" not in st.session_state:
     st.session_state.start_time = time.time()
+
+# Display Initial Cash
+st.subheader(f"💰 Initial Cash: ₹{st.session_state.cash}")
 
 # Define game parameters
 total_days = 15
@@ -53,10 +60,6 @@ weather_effects = {
     "Cold": "Increased demand for hot beverages and snacks.",
     "Very Cold": "Very high demand for hot teas and snacks."
 }
-
-# Ensure weather is always valid
-if st.session_state.weather not in weather_effects:
-    st.session_state.weather = "Sunny"
 
 # Play Day Button (Starts a New Day)
 if st.button("🎮 Play Day"):
@@ -129,23 +132,21 @@ if st.button("🔚 Close for the Day"):
     tea_wasted = max(0, sum(tea_df["Replenish Quantity"]) - tea_sold)
     snack_wasted = max(0, sum(snack_df["Replenish Quantity"]) - snack_sold)
     revenue = (tea_sold * 15) + (snack_sold * 12)
+    cost = (tea_df["Cost"] * tea_df["Replenish Quantity"]).sum() + (snack_df["Cost"] * snack_df["Replenish Quantity"]).sum()
 
     st.session_state.cash += revenue
-    st.session_state.tea_sales.append(tea_sold)
-    st.session_state.snack_sales.append(snack_sold)
     st.session_state.revenue_history.append(revenue)
     st.session_state.wastage_history.append(tea_wasted + snack_wasted)
+    st.session_state.cost_history.append(cost)
 
-    st.subheader(f"📊 Day {st.session_state.day} Summary")
-    st.write(f"🔹 **Tea Sold:** {tea_sold}, **Tea Wasted:** {tea_wasted}")
-    st.write(f"🔹 **Snacks Sold:** {snack_sold}, **Snacks Wasted:** {snack_wasted}")
-    st.write(f"🔹 **Total Revenue:** ₹{revenue}")
-    st.write(f"🔹 **Cash Available:** ₹{st.session_state.cash}")
+    # Update Summary Table
+    new_row = pd.DataFrame({"Day": [st.session_state.day], "Tea Sold": [tea_sold], "Snacks Sold": [snack_sold], 
+                            "Revenue": [revenue], "Cost": [cost], "Wastage": [tea_wasted + snack_wasted]})
+    st.session_state.sales_summary = pd.concat([st.session_state.sales_summary, new_row], ignore_index=True)
 
-    # Reset inventory to zero
-    st.session_state.tea_sales = []
-    st.session_state.snack_sales = []
-    
+    st.subheader("📊 Day-wise Sales Summary")
+    st.write(st.session_state.sales_summary)
+
     st.session_state.day += 1
 
 if st.session_state.day > total_days or remaining_time == 0:

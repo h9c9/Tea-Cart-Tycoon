@@ -18,6 +18,8 @@ if "weather" not in st.session_state:
     st.session_state.weather = "Sunny"  # Default weather
 if "event" not in st.session_state:
     st.session_state.event = None
+if "cost" not in st.session_state:
+    st.session_state.cost = 0  # Track daily inventory cost
 if "sales_summary" not in st.session_state:
     st.session_state.sales_summary = pd.DataFrame(columns=["Day", "Tea Sold", "Snacks Sold", "Revenue", "Cost", "Wastage", "Event"])
 if "start_time" not in st.session_state:
@@ -55,6 +57,7 @@ weather_effects = {
 if st.button("🎮 Play Day"):
     st.session_state.weather = random.choice(list(weather_effects.keys()))  # Generate new weather
     st.session_state.event = None  # Reset event
+    st.session_state.cost = 0  # Reset daily cost
     st.success(f"New Day Started! Weather: {st.session_state.weather}")
 
 # Display Today's Weather Condition
@@ -102,13 +105,14 @@ for snack, details in snack_types.items():
 snack_df = pd.DataFrame(snack_data, columns=["Snack Type", "Price", "Cost", "Replenish Quantity"])
 st.write(snack_df)
 
-# Deduct Cost for Inventory Purchase
-cost = (tea_df["Cost"] * tea_df["Replenish Quantity"]).sum() + (snack_df["Cost"] * snack_df["Replenish Quantity"]).sum()
-if st.session_state.cash >= cost:
-    st.session_state.cash -= cost
-    st.success(f"Inventory purchased! ₹{cost} deducted from Cash in Hand.")
-else:
-    st.error("Not enough cash! Reduce inventory.")
+# Calculate and Deduct Inventory Cost **Only Once**
+if st.button("📦 Purchase Inventory"):
+    st.session_state.cost = (tea_df["Cost"] * tea_df["Replenish Quantity"]).sum() + (snack_df["Cost"] * snack_df["Replenish Quantity"]).sum()
+    if st.session_state.cash >= st.session_state.cost:
+        st.session_state.cash -= st.session_state.cost
+        st.success(f"Inventory purchased! ₹{st.session_state.cost} deducted from Cash in Hand.")
+    else:
+        st.error("Not enough cash! Reduce inventory.")
 
 # Generate Random Business Event when Business Starts
 if st.button("🚀 Start Business"):
@@ -137,7 +141,7 @@ if st.button("🔚 Close for the Day"):
 
     # Update Summary Table with Event of the Day
     new_row = pd.DataFrame({"Day": [st.session_state.day], "Tea Sold": [sum(tea_sold)], "Snacks Sold": [sum(snack_sold)], 
-                            "Revenue": [revenue], "Cost": [cost], "Wastage": [wastage], 
+                            "Revenue": [revenue], "Cost": [st.session_state.cost], "Wastage": [wastage], 
                             "Event": [st.session_state.event if st.session_state.event else "No Event"]})
     st.session_state.sales_summary = pd.concat([st.session_state.sales_summary, new_row], ignore_index=True)
 
@@ -150,6 +154,7 @@ if st.session_state.day > total_days or remaining_time == 0:
     st.subheader("🏁 Game Over!")
     st.write(f"💰 **Final Cash:** ₹{st.session_state.cash}")
     st.write("🎉 Thank you for playing Tea Cart Tycoon!")
+
 
 
 

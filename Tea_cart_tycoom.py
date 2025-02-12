@@ -63,7 +63,7 @@ if st.session_state.day == 1 or st.button("📅 End Day & Generate Forecast"):
     st.session_state.forecast = random.sample(locations, 2)  # Pick 2 locations
     st.success("🔮 Tomorrow's Market Forecast:")
     for loc in st.session_state.forecast:
-        forecast_event, impact_range = random.choice(event_impact[loc])  # Select random event
+        forecast_event, _ = random.choice(event_impact[loc])  # Select random event
         st.write(f"📌 **{loc}** → *{forecast_event}*")
 
 # **Weather Generation for Current Day**
@@ -77,6 +77,7 @@ st.write(f"🌤 **{st.session_state.weather}**")
 
 # **Business Events for Today (Actual impact applied)**
 st.subheader("📢 Event of the Day")
+event_results = {}
 for loc in locations:
     event_tuple = random.choice(event_impact[loc])  # Select random event with impact range
 
@@ -84,24 +85,76 @@ for loc in locations:
         event, impact_range = event_tuple  # Unpack event and impact range
         
         # **Ensure impact_range is valid**
-        if isinstance(impact_range, tuple) and len(impact_range) == 2:
-            min_impact, max_impact = impact_range
-            
-            if min_impact > max_impact:  # If reversed, swap values
-                min_impact, max_impact = max_impact, min_impact
-            
-            if min_impact < max_impact:  # Ensure valid range before using randint
-                impact = random.randint(min_impact, max_impact)
-            else:
-                impact = min_impact  # Use fixed value if range is the same
-        else:
-            impact = 0  # Default impact if range is invalid
+        min_impact, max_impact = sorted(impact_range)  # Fix reversed ranges
+        impact = random.randint(min_impact, max_impact) if min_impact < max_impact else min_impact
         
+        event_results[loc] = (event, impact)
         st.write(f"📌 **{loc}** → *{event}* → Impact: **{impact}%** sales change")
     else:
         st.warning(f"⚠️ No valid event found for {loc}. Skipping event.")
 
-# Proceed with inventory selection, selling, and day-end summary...
+# **Inventory & Sales Simulation**
+st.subheader("📦 Inventory & Sales")
+
+# **Player selects inventory for the day**
+tea_quantity = st.slider("Select tea stock", 0, 100, 50)
+snack_quantity = st.slider("Select snack stock", 0, 80, 40)
+
+# **Sales Calculation (Based on Impact)**
+base_tea_sales = random.randint(30, 80)
+base_snack_sales = random.randint(20, 60)
+
+# Adjust sales based on event impact
+total_impact = sum(impact for _, impact in event_results.values()) / len(event_results) if event_results else 0
+adjusted_tea_sales = max(0, min(tea_quantity, int(base_tea_sales * (1 + total_impact / 100))))
+adjusted_snack_sales = max(0, min(snack_quantity, int(base_snack_sales * (1 + total_impact / 100))))
+
+# **Wastage Calculation**
+tea_waste = tea_quantity - adjusted_tea_sales
+snack_waste = snack_quantity - adjusted_snack_sales
+
+# **Revenue & Cost**
+tea_price = 15
+snack_price = 12
+tea_cost = 8
+snack_cost = 5
+
+revenue = (adjusted_tea_sales * tea_price) + (adjusted_snack_sales * snack_price)
+cost = (tea_quantity * tea_cost) + (snack_quantity * snack_cost)
+
+# **Cash in Hand Update**
+st.session_state.cash += revenue - cost
+
+# **Display Day Summary**
+st.subheader("📊 Day Summary")
+st.write(f"💰 Revenue: ₹{revenue}")
+st.write(f"💸 Cost: ₹{cost}")
+st.write(f"💰 Cash in Hand: ₹{st.session_state.cash}")
+st.write(f"🫗 Tea Wasted: {tea_waste} units")
+st.write(f"🍪 Snack Wasted: {snack_waste} units")
+
+# **Update Summary Table**
+new_row = pd.DataFrame({
+    "Day": [st.session_state.day],
+    "Tea Sold": [adjusted_tea_sales],
+    "Snacks Sold": [adjusted_snack_sales],
+    "Revenue": [revenue],
+    "Cost": [cost],
+    "Wastage": [tea_waste + snack_waste],
+    "Event": [", ".join([f"{loc}: {ev[0]}" for loc, ev in event_results.items()])]
+})
+st.session_state.sales_summary = pd.concat([st.session_state.sales_summary, new_row], ignore_index=True)
+
+# **Display Sales Summary**
+st.subheader("📊 Sales History")
+st.write(st.session_state.sales_summary)
+
+# **Proceed to Next Day**
+if st.button("➡️ Proceed to Next Day"):
+    st.session_state.day += 1
+    if st.session_state.day > total_days:
+        st.success("🎉 Game Over! Thanks for playing!")
+
 
 
 

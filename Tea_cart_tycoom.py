@@ -16,8 +16,6 @@ if "game_over" not in st.session_state:
     st.session_state.game_over = False
 if "weather" not in st.session_state:
     st.session_state.weather = "Sunny"  # Default weather
-if "event" not in st.session_state:
-    st.session_state.event = None
 if "forecast" not in st.session_state:
     st.session_state.forecast = []  # Stores forecast for 2 locations
 if "sales_summary" not in st.session_state:
@@ -80,80 +78,70 @@ st.subheader("📢 Event of the Day")
 event_results = {}
 for loc in locations:
     event_tuple = random.choice(event_impact[loc])  # Select random event with impact range
-
     if isinstance(event_tuple, tuple) and len(event_tuple) == 2:
-        event, impact_range = event_tuple  # Unpack event and impact range
-        
-        # **Ensure impact_range is valid**
+        event, impact_range = event_tuple  
         min_impact, max_impact = sorted(impact_range)  # Fix reversed ranges
         impact = random.randint(min_impact, max_impact) if min_impact < max_impact else min_impact
-        
         event_results[loc] = (event, impact)
         st.write(f"📌 **{loc}** → *{event}* → Impact: **{impact}%** sales change")
-    else:
-        st.warning(f"⚠️ No valid event found for {loc}. Skipping event.")
 
-# **Inventory & Sales Simulation**
-st.subheader("📦 Inventory & Sales")
+# **Inventory Selection (Restored Item-Wise Inventory)**
+st.subheader("📦 Inventory Management")
+tea_types = {
+    "Masala Chai": {"Price": 15, "Cost": 8},
+    "Green Tea": {"Price": 20, "Cost": 12},
+    "Herbal Tea": {"Price": 25, "Cost": 15},
+    "Ginger Tea": {"Price": 18, "Cost": 10}
+}
 
-# **Player selects inventory for the day**
-tea_quantity = st.slider("Select tea stock", 0, 100, 50)
-snack_quantity = st.slider("Select snack stock", 0, 80, 40)
+snack_types = {
+    "Samosa": {"Price": 12, "Cost": 5},
+    "Kachori": {"Price": 10, "Cost": 4},
+    "Sandwich": {"Price": 30, "Cost": 18},
+    "Pakora": {"Price": 15, "Cost": 7},
+    "Patties": {"Price": 20, "Cost": 12}
+}
 
-# **Sales Calculation (Based on Impact)**
-base_tea_sales = random.randint(30, 80)
-base_snack_sales = random.randint(20, 60)
+tea_inventory = {tea: st.slider(f"Replenish {tea}", 0, 100, 0) for tea in tea_types}
+snack_inventory = {snack: st.slider(f"Replenish {snack}", 0, 80, 0) for snack in snack_types}
 
-# Adjust sales based on event impact
+# **Calculate Inventory Cost & Deduct Cash**
+inventory_cost = sum(tea_inventory[t] * tea_types[t]["Cost"] for t in tea_inventory) + sum(snack_inventory[s] * snack_types[s]["Cost"] for s in snack_inventory)
+if st.session_state.cash >= inventory_cost:
+    st.session_state.cash -= inventory_cost
+    st.success(f"💰 Inventory Purchased! ₹{inventory_cost} deducted.")
+else:
+    st.error("❌ Not enough cash! Reduce inventory.")
+
+# **Sales Calculation (Adjusted by Demand Shift)**
+base_tea_sales = {t: random.randint(5, 20) for t in tea_inventory}
+base_snack_sales = {s: random.randint(5, 15) for s in snack_inventory}
+
+# Adjust based on demand shift
 total_impact = sum(impact for _, impact in event_results.values()) / len(event_results) if event_results else 0
-adjusted_tea_sales = max(0, min(tea_quantity, int(base_tea_sales * (1 + total_impact / 100))))
-adjusted_snack_sales = max(0, min(snack_quantity, int(base_snack_sales * (1 + total_impact / 100))))
+tea_sales = {t: min(tea_inventory[t], int(base_tea_sales[t] * (1 + total_impact / 100))) for t in tea_inventory}
+snack_sales = {s: min(snack_inventory[s], int(base_snack_sales[s] * (1 + total_impact / 100))) for s in snack_inventory}
 
 # **Wastage Calculation**
-tea_waste = tea_quantity - adjusted_tea_sales
-snack_waste = snack_quantity - adjusted_snack_sales
+tea_waste = {t: tea_inventory[t] - tea_sales[t] for t in tea_inventory}
+snack_waste = {s: snack_inventory[s] - snack_sales[s] for s in snack_inventory}
 
-# **Revenue & Cost**
-tea_price = 15
-snack_price = 12
-tea_cost = 8
-snack_cost = 5
+# **Revenue Calculation**
+revenue = sum(tea_sales[t] * tea_types[t]["Price"] for t in tea_sales) + sum(snack_sales[s] * snack_types[s]["Price"] for s in snack_sales)
+st.session_state.cash += revenue
 
-revenue = (adjusted_tea_sales * tea_price) + (adjusted_snack_sales * snack_price)
-cost = (tea_quantity * tea_cost) + (snack_quantity * snack_cost)
-
-# **Cash in Hand Update**
-st.session_state.cash += revenue - cost
-
-# **Display Day Summary**
+# **Day Summary**
 st.subheader("📊 Day Summary")
 st.write(f"💰 Revenue: ₹{revenue}")
-st.write(f"💸 Cost: ₹{cost}")
+st.write(f"💸 Cost: ₹{inventory_cost}")
 st.write(f"💰 Cash in Hand: ₹{st.session_state.cash}")
-st.write(f"🫗 Tea Wasted: {tea_waste} units")
-st.write(f"🍪 Snack Wasted: {snack_waste} units")
-
-# **Update Summary Table**
-new_row = pd.DataFrame({
-    "Day": [st.session_state.day],
-    "Tea Sold": [adjusted_tea_sales],
-    "Snacks Sold": [adjusted_snack_sales],
-    "Revenue": [revenue],
-    "Cost": [cost],
-    "Wastage": [tea_waste + snack_waste],
-    "Event": [", ".join([f"{loc}: {ev[0]}" for loc, ev in event_results.items()])]
-})
-st.session_state.sales_summary = pd.concat([st.session_state.sales_summary, new_row], ignore_index=True)
-
-# **Display Sales Summary**
-st.subheader("📊 Sales History")
-st.write(st.session_state.sales_summary)
 
 # **Proceed to Next Day**
 if st.button("➡️ Proceed to Next Day"):
     st.session_state.day += 1
     if st.session_state.day > total_days:
         st.success("🎉 Game Over! Thanks for playing!")
+
 
 
 
